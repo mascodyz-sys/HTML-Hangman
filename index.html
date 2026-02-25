@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hangman - Categories & Lives</title>
+<style>
+  body{font-family:Arial,sans-serif;background:#111;color:#eee;margin:0;padding:15px;text-align:center;}
+  h1{color:#4fc3f7;margin:10px 0;font-size:2rem;}
+  #word{font-size:clamp(2rem,8vw,3.5rem);letter-spacing:6px;margin:20px 0;font-weight:bold;}
+  #letters{max-width:90%;margin:15px auto;}
+  button.key{width:48px;height:48px;margin:5px;font-size:1.4rem;background:#333;color:white;border:2px solid #555;border-radius:10px;cursor:pointer;}
+  button.key:disabled{opacity:0.4;cursor:not-allowed;}
+  button.key:hover:not(:disabled){background:#555;}
+  #hangman{display:block;margin:0 auto;}
+  #message{font-size:clamp(1.5rem,6vw,2.2rem);margin:20px 0;min-height:50px;}
+  #restart{font-size:1.3rem;padding:12px 35px;margin:15px;background:#2ecc71;border:none;border-radius:10px;color:white;cursor:pointer;display:none;}
+  #lives{font-size:2rem;margin:10px;color:#e74c3c;}
+  #category-select{margin:20px;}
+  select{font-size:1.2rem;padding:8px;border-radius:8px;background:#333;color:#eee;border:1px solid #555;}
+  button.start{font-size:1.2rem;padding:10px 25px;margin:10px;background:#3498db;border:none;border-radius:8px;color:white;cursor:pointer;}
+  @media (max-width:500px){button.key{width:42px;height:42px;font-size:1.2rem;margin:4px;}}
+</style>
+</head>
+<body>
+
+<h1>Hangman</h1>
+
+<div id="category-select">
+  <label>Choose Category: </label>
+  <select id="cat">
+    <option value="general">General (Mixed)</option>
+    <option value="animals">Animals</option>
+    <option value="countries">Countries</option>
+    <option value="foods">Foods</option>
+  </select>
+  <button class="start" onclick="startGame()">Start Game</button>
+</div>
+
+<svg height="240" width="200" id="hangman" style="display:none;">
+  <line x1="20" y1="210" x2="180" y2="210" stroke="#777"/>
+  <line x1="140" y1="20" x2="140" y2="210" stroke="#777"/>
+  <line x1="60" y1="20" x2="140" y2="20" stroke="#777"/>
+  <line x1="60" y1="20" x2="60" y2="50" stroke="#777"/>
+  <circle cx="60" cy="70" r="20" id="head" style="display:none;"/>
+  <line x1="60" y1="90" x2="60" y2="140" id="body" style="display:none;"/>
+  <line x1="60" y1="100" x2="40" y2="120" id="leftArm" style="display:none;"/>
+  <line x1="60" y1="100" x2="80" y2="120" id="rightArm" style="display:none;"/>
+  <line x1="60" y1="140" x2="40" y2="180" id="leftLeg" style="display:none;"/>
+  <line x1="60" y1="140" x2="80" y2="180" id="rightLeg" style="display:none;"/>
+</svg>
+
+<div id="lives"></div>
+<div id="word"></div>
+<div id="letters"></div>
+<div id="message"></div>
+<button id="restart">Play Again</button>
+
+<script>
+const categories = {
+  general: ["javascript","hangman","friend","sunshine","kerala","computer","mountain","elephant","butterfly","umbrella","guitar","beach","coffee","rocket","puzzle","adventure","bicycle","camera","desert","forest","guitar","island","jungle","kite","laptop","moon","notebook","ocean","piano","queen","river","star","train","village","window","yellow","zoo","apple","book","cloud","dragon","echo","flower","ghost","house","igloo","jelly","key","lemon","magic","night","orange","panda","quiet","rainbow","snake","tiger","unicorn","violet","whale","xray","yacht","zebra"],
+  animals: ["lion","tiger","elephant","giraffe","zebra","monkey","gorilla","kangaroo","koala","panda","bear","wolf","fox","deer","horse","cow","pig","sheep","goat","chicken","duck","goose","turkey","eagle","hawk","owl","parrot","penguin","dolphin","whale","shark","octopus","frog","toad","snake","lizard","crocodile","alligator","turtle","rabbit","squirrel","hedgehog","bat","camel","llama","hippo","rhino","leopard","cheetah","jaguar","hyena","buffalo","bison","moose","reindeer","antelope","beaver","otter","seal","walrus","porcupine","armadillo","platypus","echidna","sloth","lemur","orangutan","chimpanzee","peacock","flamingo","swan","pelican","crane","sparrow","crow","raven","robin","bluejay","woodpecker","butterfly","bee","ant","ladybug","spider","scorpion","snail","worm","fish","salmon","trout","tuna","cod"],
+  countries: ["afghanistan","albania","algeria","andorra","angola","argentina","armenia","australia","austria","azerbaijan","bahamas","bahrain","bangladesh","barbados","belarus","belgium","belize","benin","bhutan","bolivia","bosnia","botswana","brazil","brunei","bulgaria","burundi","cambodia","cameroon","canada","chad","chile","china","colombia","comoros","congo","croatia","cuba","cyprus","denmark","djibouti","dominica","ecuador","egypt","eritrea","estonia","ethiopia","fiji","finland","france","gabon","gambia","georgia","germany","ghana","greece","grenada","guatemala","guinea","guyana","haiti","honduras","hungary","iceland","india","indonesia","iran","iraq","ireland","israel","italy","jamaica","japan","jordan","kazakhstan","kenya","korea","kuwait","kyrgyzstan","laos","latvia","lebanon","lesotho","liberia","libya","lithuania","luxembourg","madagascar","malawi","malaysia","maldives","mali","malta","mauritania","mauritius","mexico","moldova","monaco","mongolia","montenegro","morocco","mozambique","myanmar","namibia","nepal","netherlands","nicaragua","niger","nigeria","norway","oman","pakistan","panama","peru","philippines","poland","portugal","qatar","romania","russia","rwanda","samoa","senegal","serbia","singapore","slovakia","slovenia","somalia","spain","sudan","sweden","switzerland","syria","taiwan","tajikistan","tanzania","thailand","togo","tunisia","turkey","turkmenistan","uganda","ukraine","uruguay","uzbekistan","venezuela","vietnam","yemen","zambia","zimbabwe"],
+  foods: ["pizza","burger","sushi","pasta","salad","sandwich","taco","burrito","curry","soup","steak","chicken","fish","rice","noodles","bread","cheese","egg","bacon","pancake","waffle","omelette","frenchfries","hotdog","popcorn","chocolate","cookie","cake","icecream","donut","pie","apple","banana","orange","grape","strawberry","blueberry","pineapple","mango","kiwi","watermelon","tomato","potato","carrot","onion","garlic","lettuce","cucumber","broccoli","cauliflower","spinach","mushroom","pepper","corn","beans","lentils","yogurt","milk","butter","jam","honey","nut","almond","peanut","cashew","walnut","pistachio","coconut","avocado","olive","salsa","ketchup","mustard","mayo","sauce","spaghetti","lasagna","ravioli","quesadilla","fajita","enchilada","paella","risotto","gnocchi","dumpling","samosa","falafel","hummus","kebab","shawarma","gyro","biryani","schnitzel","goulash","tikka","masala","ramen","pho","sashimi","tempura","sashimi","udon","teriyaki"]
+};
+
+let selectedWord = "";
+let guessed = new Set();
+let mistakes = 0;
+const maxMistakes = 6;
+
+const wordEl = document.getElementById("word");
+const msgEl = document.getElementById("message");
+const livesEl = document.getElementById("lives");
+const restartBtn = document.getElementById("restart");
+const hangman = document.getElementById("hangman");
+const catSelect = document.getElementById("category-select");
+
+function startGame() {
+  const cat = document.getElementById("cat").value;
+  const wordList = categories[cat];
+  selectedWord = wordList[Math.floor(Math.random() * wordList.length)].toLowerCase();
+  guessed.clear();
+  mistakes = 0;
+  msgEl.textContent = "";
+  restartBtn.style.display = "none";
+  catSelect.style.display = "none";
+  hangman.style.display = "block";
+
+  document.querySelectorAll("#hangman [id]").forEach(el => el.style.display = "none");
+  updateLives();
+  updateWord();
+  buildKeys();
+}
+
+function updateLives() {
+  livesEl.textContent = "Lives: " + "❤️".repeat(maxMistakes - mistakes) + "🖤".repeat(mistakes);
+}
+
+function updateWord() {
+  wordEl.textContent = [...selectedWord].map(c => guessed.has(c) ? c : "_").join(" ");
+  checkEnd();
+}
+
+function buildKeys() {
+  const div = document.getElementById("letters");
+  div.innerHTML = "";
+  "abcdefghijklmnopqrstuvwxyz".split("").forEach(l => {
+    const b = document.createElement("button");
+    b.className = "key";
+    b.textContent = l;
+    b.dataset.l = l;
+    b.onclick = () => guess(l, b);
+    div.appendChild(b);
+  });
+}
+
+function guess(l, btn) {
+  if (guessed.has(l)) return;
+  guessed.add(l);
+  btn.disabled = true;
+
+  if (selectedWord.includes(l)) {
+    updateWord();
+  } else {
+    mistakes++;
+    if (mistakes <= maxMistakes) {
+      document.getElementById(["head","body","leftArm","rightArm","leftLeg","rightLeg"][mistakes-1]).style.display = "block";
+    }
+    updateLives();
+    updateWord();
+  }
+}
+
+function checkEnd() {
+  const revealed = wordEl.textContent.replace(/ /g, "");
+  if (revealed === selectedWord) {
+    msgEl.textContent = "You won! Awesome dude!";
+    msgEl.style.color = "#2ecc71";
+    endGame();
+  } else if (mistakes >= maxMistakes) {
+    msgEl.textContent = `Game over! Word was "${selectedWord}"`;
+    msgEl.style.color = "#e74c3c";
+    endGame();
+  }
+}
+
+function endGame() {
+  document.querySelectorAll(".key").forEach(b => b.disabled = true);
+  restartBtn.style.display = "inline-block";
+}
+
+window.addEventListener("keydown", e => {
+  const k = e.key.toLowerCase();
+  if (k.length === 1 && /[a-z]/.test(k)) {
+    const btn = document.querySelector(`button[data-l="${k}"]`);
+    if (btn && !btn.disabled) guess(k, btn);
+  }
+});
+
+restartBtn.onclick = () => {
+  catSelect.style.display = "block";
+  hangman.style.display = "none";
+  wordEl.textContent = "";
+  document.getElementById("letters").innerHTML = "";
+  livesEl.textContent = "";
+  msgEl.textContent = "";
+  restartBtn.style.display = "none";
+};
+
+</script>
+</body>
+</html>
